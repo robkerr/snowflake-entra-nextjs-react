@@ -3,17 +3,11 @@
 import React, { useState, useRef, useEffect } from "react";
 import { useMsal, useAccount, useIsAuthenticated } from "@azure/msal-react";
 // import { BrowserUtils } from "@azure/msal-browser";
-// import { snowflakeQuery } from '@/lib/snowflake-query';
-
-type Entry = {
-  userText: string;
-  charCount: number;
-  asciiSum: number;
-};
+import { snowflakeQuery } from '@/lib/snowflake-query';
 
 export default function ChatPage() {
   const [input, setInput] = useState("SELECT TOP 10 * FROM DW.PUBLIC.SHIP_PLAN");
-  const [entries, setEntries] = useState<Entry[]>([]);
+  const [entries, setEntries] = useState<JSON[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // MSAL Integration
@@ -21,7 +15,43 @@ export default function ChatPage() {
   // const [tokenIssuance, setTokenIssuance] = useState(null);
   // const [tokenExpiration, setTokenExpiration] = useState(null);
   // const [userName, setUserName] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  async function getAccessToken(scope: string): Promise<string | null> {
+    if (!instance) {
+      console.error("MSAL instance is not available.");
+      return null;
+    }
+    const activeAccount = instance.getActiveAccount();
+    if (!activeAccount) {
+      console.error("No active account found.");
+      return null;
+    }
+    try {
+      const request = {
+        scopes: [scope],
+        account: activeAccount,
+      };
+      const authResult = await instance.acquireTokenSilent(request);
+      return authResult.accessToken;
+    } catch (error) {
+      console.error("Failed to acquire token silently:", error);
+      return null;
+    }
+  }
+
+  async function submitQuery(sql: string): Promise<JSON[] | undefined> {
+    const scope = process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE ?? "";
+    const accessToken = await getAccessToken(scope);
+    if (!accessToken) {
+      console.error("No access token available.");
+      return [];
+    }
+
+    const response = await snowflakeQuery(sql, accessToken);
+    console.log('Response from Snowflake:', response.data);
+
+    return Array.isArray(response.data) ? response.data : [];
+  }
 
   useEffect(() => {
     if (!instance) {
@@ -48,29 +78,14 @@ export default function ChatPage() {
               });
           } 
 
-          if (response.account) {
+          if (response && response.account) {
             activeAccount = response.account;
-            instance.setActiveAccount(response.account);
-
-            const request = {
-              scopes: [scope],
-              account: activeAccount
-            };
-
-            // Get Access Token
-            const authResult = await instance.acquireTokenSilent(request);
-
-            // setAuthResult(authResult);
-            // setAuthResultString(JSON.stringify(authResult, null, 2));
-            // setTokenIssuance(epochToString(authResult.idTokenClaims.iat));
-            // setTokenExpiration(epochToString(authResult.idTokenClaims.exp));
-            // setUserName(authResult.idTokenClaims.preferred_username);
-            console.log("Login successful, access token acquired:", authResult.accessToken);
-            setAccessToken(authResult.accessToken);
+            instance.setActiveAccount(activeAccount);
+            console.log("User logged in successfully:", activeAccount);
           } else {
-              console.error("Login failed (no account found).");
-              // showErrorToast(`Login failed. No account associated with this user.`);
-          }    
+            console.error("No account found after login.");
+          }
+
         } catch (error) {
           console.error("Login failed:", error);
           // showErrorToast(`Login failed. Please try again. ${(error as Error).message}`);
@@ -94,18 +109,21 @@ export default function ChatPage() {
     }
   }
 
-  function handleGo() {
+  async function handleGo() {
     if (input.trim() === "") return;
-    const charCount = input.length;
-    const asciiSum = input.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0);
-    setEntries([
-      ...entries,
-      {
-        userText: input,
-        charCount,
-        asciiSum,
-      },
-    ]);
+
+    const results = await submitQuery(input);
+    console.log('SQL Response:', results);
+    // const charCount = input.length;
+    // const asciiSum = input.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0);
+
+    if (!results) {
+      console.error("No SQL response received.");
+      return;
+    } else {
+      setEntries(results);
+    }
+    
     setInput("");
     if (textareaRef.current) textareaRef.current.focus();
   }
@@ -171,27 +189,13 @@ export default function ChatPage() {
                   <table className="min-w-full text-white/90 text-base table-fixed break-words">
                     <thead>
                       <tr>
-                        <th className="text-left p-2 font-semibold">User Entry</th>
-                        <th className="text-right p-2 font-semibold">Char Count</th>
-                        <th className="text-right p-2 font-semibold">ASCII Sum</th>
-                        <th className="text-right p-2 font-semibold">ASCII Sum</th>
-                        <th className="text-right p-2 font-semibold">ASCII Sum</th>
-                        <th className="text-right p-2 font-semibold">ASCII Sum</th>
-                        <th className="text-right p-2 font-semibold">ASCII Sum</th>
-                        <th className="text-right p-2 font-semibold">ASCII Sum</th>
+                        <th className="text-left p-2 font-semibold">First Column Value</th>
                       </tr>
                     </thead>
                     <tbody>
                       {entries.map((entry, idx) => (
                         <tr key={idx} className="border-t border-white/10">
-                          <td className="p-2 whitespace-pre-wrap align-top max-w-[180px] break-words">{entry.userText}</td>
-                          <td className="p-2 text-right align-top">{entry.charCount}</td>
-                          <td className="p-2 text-right align-top">{entry.asciiSum}</td>
-                          <td className="p-2 text-right align-top">{entry.asciiSum}</td>
-                          <td className="p-2 text-right align-top">{entry.asciiSum}</td>
-                          <td className="p-2 text-right align-top">{entry.asciiSum}</td>
-                          <td className="p-2 text-right align-top">{entry.asciiSum}</td>
-                          <td className="p-2 text-right align-top">{entry.asciiSum}</td>
+                          <td className="p-2 text-right align-top">{JSON.stringify(entry)}</td>
                         </tr>
                       ))}
                     </tbody>
