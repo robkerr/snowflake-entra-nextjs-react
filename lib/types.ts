@@ -3,6 +3,7 @@ export interface RowData {
 }
 
 export interface ScrollableDataTableProps {
+    headings: string[];
     data: RowData[];
     className?: string;
 }

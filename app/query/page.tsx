@@ -11,8 +11,9 @@ import { useMsal, useAccount, useIsAuthenticated } from "@azure/msal-react";
 import { snowflakeQuery } from '@/lib/snowflake-query';
 
 export default function ChatPage() {
-  const [input, setInput] = useState("SELECT TOP 10 * FROM DW.PUBLIC.SHIP_PLAN");
+  const [input, setInput] = useState("SELECT TOP 10 * FROM DW.PUBLIC.FORECAST");
   const [entries, setEntries] = useState<RowData[]>([]);
+  const [headings, setHeadings] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // MSAL Integration
@@ -44,18 +45,36 @@ export default function ChatPage() {
     }
   }
 
-  async function submitQuery(sql: string): Promise<RowData[] | undefined> {
+  async function submitQuery(sql: string): Promise<boolean> {
     const scope = process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE ?? "";
     const accessToken = await getAccessToken(scope);
     if (!accessToken) {
       console.error("No access token available.");
-      return [];
+      return false;
     }
 
-    const response = await snowflakeQuery(sql, accessToken);
-    console.log('Response from Snowflake:', response.data);
+    try {
+      // Check if the SQL statement is empty or only whitespace
+      const response = await snowflakeQuery(sql, accessToken);
+      console.log('Response from Snowflake:', response.data);
 
-    return Array.isArray(response.data) ? response.data : [];
+      if (!response || !response.data) {
+        console.error("No SQL response received.");
+        return false;
+      } else {
+        setEntries(response.data);
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const columns = response["resultSetMetaData"]["rowType"].map((col: any) => col.name);
+        console.log("Columns:", columns);
+        setHeadings(columns);
+        
+        return true;
+      }
+    } catch (error) {
+      console.error("Error executing SQL query:", error);
+      return false;
+    }
   }
 
   useEffect(() => {
@@ -117,17 +136,17 @@ export default function ChatPage() {
   async function handleGo() {
     if (input.trim() === "") return;
 
-    const results = await submitQuery(input);
-    console.log('SQL Response:', results);
-
-    if (!results) {
-      console.error("No SQL response received.");
-      return;
-    } else {
-      setEntries(results);
-    }
+    const success = await submitQuery(input);
     
-    setInput("");
+    if (!success) {
+      // If the query failed, we can show an error message or reset the input
+      console.error("Query execution failed.");
+      setHeadings([]); // Clear headings on error
+      setEntries([]); // Clear entries on error
+      return;
+    } 
+
+    setInput("SELECT TOP 10 * FROM DW.PUBLIC.FORECAST"); // Reset input to default query
     if (textareaRef.current) textareaRef.current.focus();
   }
 
@@ -189,7 +208,7 @@ export default function ChatPage() {
 
               {entries.length > 0 && (
                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-5 mt-6 overflow-x-auto">
-                  <ScrollableDataTable data={entries} />
+                  <ScrollableDataTable headings={headings} data={entries} />
                 </div>
               )}
             </div>
