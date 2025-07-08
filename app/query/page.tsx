@@ -1,13 +1,18 @@
 
 "use client";
 import React, { useState, useRef, useEffect } from "react";
+import dynamic from "next/dynamic";
+import type { RowData } from "@/lib/types";
+
+// Dynamically import the ScrollableDataTable component for client-side rendering only
+const ScrollableDataTable = dynamic(() => import("@/components/scrollable-data-table"), { ssr: false });
 import { useMsal, useAccount, useIsAuthenticated } from "@azure/msal-react";
 // import { BrowserUtils } from "@azure/msal-browser";
 import { snowflakeQuery } from '@/lib/snowflake-query';
 
 export default function ChatPage() {
   const [input, setInput] = useState("SELECT TOP 10 * FROM DW.PUBLIC.SHIP_PLAN");
-  const [entries, setEntries] = useState<JSON[]>([]);
+  const [entries, setEntries] = useState<RowData[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   // MSAL Integration
@@ -39,7 +44,7 @@ export default function ChatPage() {
     }
   }
 
-  async function submitQuery(sql: string): Promise<JSON[] | undefined> {
+  async function submitQuery(sql: string): Promise<RowData[] | undefined> {
     const scope = process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE ?? "";
     const accessToken = await getAccessToken(scope);
     if (!accessToken) {
@@ -114,8 +119,6 @@ export default function ChatPage() {
 
     const results = await submitQuery(input);
     console.log('SQL Response:', results);
-    // const charCount = input.length;
-    // const asciiSum = input.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0);
 
     if (!results) {
       console.error("No SQL response received.");
@@ -186,20 +189,7 @@ export default function ChatPage() {
 
               {entries.length > 0 && (
                 <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-5 mt-6 overflow-x-auto">
-                  <table className="min-w-full text-white/90 text-base table-fixed break-words">
-                    <thead>
-                      <tr>
-                        <th className="text-left p-2 font-semibold">First Column Value</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {entries.map((entry, idx) => (
-                        <tr key={idx} className="border-t border-white/10">
-                          <td className="p-2 text-right align-top">{JSON.stringify(entry)}</td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
+                  <ScrollableDataTable data={entries} />
                 </div>
               )}
             </div>
