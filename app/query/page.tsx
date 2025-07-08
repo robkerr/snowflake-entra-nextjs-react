@@ -1,7 +1,9 @@
 
 "use client";
-"use client";
-import React, { useState, useRef } from "react";
+import React, { useState, useRef, useEffect } from "react";
+import { useMsal, useAccount, useIsAuthenticated } from "@azure/msal-react";
+// import { BrowserUtils } from "@azure/msal-browser";
+// import { snowflakeQuery } from '@/lib/snowflake-query';
 
 type Entry = {
   userText: string;
@@ -13,6 +15,71 @@ export default function ChatPage() {
   const [input, setInput] = useState("SELECT TOP 10 * FROM DW.PUBLIC.SHIP_PLAN");
   const [entries, setEntries] = useState<Entry[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  // MSAL Integration
+  const { instance } = useMsal();
+  // const [tokenIssuance, setTokenIssuance] = useState(null);
+  // const [tokenExpiration, setTokenExpiration] = useState(null);
+  // const [userName, setUserName] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!instance) {
+      console.error("MSAL instance is not available in useEffect.");
+      return;
+    }
+    console.log("Query/Page mounted, initializing MSAL...");
+    const checkLogin = async () => {
+      const scope = process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE ?? "";
+      console.log("Checking login status...");
+      let activeAccount = instance.getActiveAccount(); 
+      if (!activeAccount) {
+        try {
+          let response = null;
+          try {
+            // Try silent login first
+            response = await instance.ssoSilent({
+                scopes: ["User.Read", scope], // Replace with your required scopes
+            });
+          } catch (error) {
+            console.error("Silent login failed", error);
+              response = await instance.loginPopup({
+                  scopes: ["User.Read", scope],
+              });
+          } 
+
+          if (response.account) {
+            activeAccount = response.account;
+            instance.setActiveAccount(response.account);
+
+            const request = {
+              scopes: [scope],
+              account: activeAccount
+            };
+
+            // Get Access Token
+            const authResult = await instance.acquireTokenSilent(request);
+
+            // setAuthResult(authResult);
+            // setAuthResultString(JSON.stringify(authResult, null, 2));
+            // setTokenIssuance(epochToString(authResult.idTokenClaims.iat));
+            // setTokenExpiration(epochToString(authResult.idTokenClaims.exp));
+            // setUserName(authResult.idTokenClaims.preferred_username);
+            console.log("Login successful, access token acquired:", authResult.accessToken);
+            setAccessToken(authResult.accessToken);
+          } else {
+              console.error("Login failed (no account found).");
+              // showErrorToast(`Login failed. No account associated with this user.`);
+          }    
+        } catch (error) {
+          console.error("Login failed:", error);
+          // showErrorToast(`Login failed. Please try again. ${(error as Error).message}`);
+        }
+      }
+    };  
+
+    checkLogin();
+  }, [instance]);
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);

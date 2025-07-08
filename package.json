@@ -11,19 +11,19 @@
   "dependencies": {
     "@azure/msal-browser": "latest",
     "@azure/msal-react": "latest",
+    "next": "15.3.5",
     "react": "^19.0.0",
-    "react-dom": "^19.0.0",
-    "next": "15.3.5"
+    "react-dom": "^19.0.0"
   },
   "devDependencies": {
-    "typescript": "^5",
+    "@eslint/eslintrc": "latest",
+    "@tailwindcss/postcss": "latest",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
-    "@tailwindcss/postcss": "latest",
-    "tailwindcss": "latest",
     "eslint": "latest",
     "eslint-config-next": "latest",
-    "@eslint/eslintrc": "latest"
+    "tailwindcss": "latest",
+    "typescript": "^5"
   }
 }
