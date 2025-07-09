@@ -1,16 +1,14 @@
 import { IPublicClientApplication, InteractionStatus } from "@azure/msal-browser";
 
 // Returns null if already logged in or user logs in here, otherwise returns an error message
-export async function verifyLogin(instance: IPublicClientApplication, requestedScopes: string[] | string | undefined): Promise<string | null> {
-    const isInProgress = sessionStorage.getItem("msal.interaction.status") === InteractionStatus.InProgress;
-    if (isInProgress) {
-        console.warn("Login is already in progress, skipping verification.");
-        return null; // Skip verification if login is already in progress
-    }
-    // build scopes
+import type { VerifyLoginResult } from "@/lib/types";
+
+export async function verifyLogin(
+    instance: IPublicClientApplication,
+    requestedScopes: string[] | string | undefined
+): Promise<VerifyLoginResult> {
     let scopes = ["User.Read"];
 
-    // Add scope or scopes if passed to this routine
     if (typeof requestedScopes === "string") {
         scopes.push(requestedScopes.trim());
     } else if (Array.isArray(requestedScopes)) {
@@ -18,45 +16,61 @@ export async function verifyLogin(instance: IPublicClientApplication, requestedS
     }
 
     console.log("Checking login status...");
-    let activeAccount = instance.getActiveAccount(); 
+    let activeAccount = instance.getActiveAccount();
 
     if (activeAccount) {
-        console.log("User is already logged in:", activeAccount)
-        return null; // Already logged in
+        console.log("User is already logged in:", activeAccount);
+
+        return {
+            success: true,
+            message: "User is already logged in.",
+            displayName: activeAccount.idTokenClaims?.name ?? "Unknown User",
+        };
     } else {
         try {
             let response = null;
 
-            // Try to use silent login, if unable then use a popup as fallback
             try {
-                // Try silent login first
-                console.info("Attempt sileng login first");
+                console.info("Attempt silent login first");
                 response = await instance.ssoSilent({
-                    scopes: scopes, // Replace with your required scopes
+                    scopes: scopes,
                 });
             } catch (error) {
                 console.info("Silent login failed, falling back to popup", error);
                 response = await instance.loginPopup({
                     scopes: scopes,
                 });
-            } 
+            }
 
             console.log("Login response:", response);
-            if (response && response.account) {
+            if (response !== undefined && response && response.account) {
+                const displayName = response?.account?.idTokenClaims?.name ?? "Unknown User";
+
                 activeAccount = response.account;
                 instance.setActiveAccount(activeAccount);
                 console.log("User logged in successfully:", activeAccount);
-                return null; // Successfully logged in
+                return {
+                    success: true,
+                    message: "User logged in successfully.",
+                    displayName,
+                };
             } else {
                 const errorMessage = "No account found after login.";
                 console.error(errorMessage);
-                return errorMessage;
+                return {
+                    success: false,
+                    message: errorMessage,
+                    displayName: "",
+                };
             }
-
         } catch (error) {
             const errorMessage = "Login failed: " + (error as Error).message;
             console.error(errorMessage);
-            return errorMessage;
+            return {
+                success: false,
+                message: errorMessage,
+                displayName: "",
+            };
         }
     }
 }

@@ -3,7 +3,7 @@
 import { PublicClientApplication } from '@azure/msal-browser';
 import { MsalProvider } from '@azure/msal-react';
 // import { msalConfig } from '@/lib/msal-config';
-import { ReactNode } from 'react';
+import { ReactNode, useEffect } from 'react';
 
 // MSAL instance
 const clientId = process.env.NEXT_PUBLIC_AZURE_CLIENT_ID ?? "";
@@ -31,20 +31,20 @@ interface MSALProviderProps {
 export function MSALProviderWrapper({ children }: MSALProviderProps) {
   // const [isInitialized, setIsInitialized] = useState(false);
 
-  // useEffect(() => {
-  //   const initializeMsal = async () => {
-  //     try {
-  //       console.log("Initializing MSAL...");
-  //       await msalInstance.initialize();
-  //       setIsInitialized(true);
-  //     } catch (error) {
-  //       console.error('MSAL initialization failed:', error);
-  //       setIsInitialized(true); // Still render children even if MSAL fails
-  //     }
-  //   };
+  useEffect(() => {
+    const initializeMsal = async () => {
+      try {
+        console.log("Initializing MSAL...");
+        await msalInstance.initialize();
+        // setIsInitialized(true);
+      } catch (error) {
+        console.error('MSAL initialization failed:', error);
+        // setIsInitialized(true); // Still render children even if MSAL fails
+      }
+    };
 
-  //   initializeMsal();
-  // }, []);
+    initializeMsal();
+  }, []);
 
   // if (!isInitialized) {
   //   return (

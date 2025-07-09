@@ -11,6 +11,7 @@ import { useMsal } from "@azure/msal-react";
 // import { BrowserUtils } from "@azure/msal-browser";
 import { snowflakeQuery } from '@/lib/snowflake-query';
 import { verifyLogin, getAccessToken } from "@/lib/msal-helper";
+import type { VerifyLoginResult } from "@/lib/types";
 
 export default function ChatPage() {
   // Query input from user
@@ -30,7 +31,7 @@ export default function ChatPage() {
   
   // const [tokenIssuance, setTokenIssuance] = useState(null);
   // const [tokenExpiration, setTokenExpiration] = useState(null);
-  // const [userName, setUserName] = useState<string | null>(null);
+  const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
 
   async function submitQuery(sql: string): Promise<boolean> {
 
@@ -67,29 +68,35 @@ export default function ChatPage() {
 
   useEffect(() => {
     
-    const checkLogin = async (): Promise<string | null> => {
+    const checkLogin = async () => {
+      // Configuation check
       if (!instance) {
         const errorMessage = "MSAL instance is not available in useEffect.";
         console.error(errorMessage);
-        return errorMessage;
-      }
-
-      const verifyError = await verifyLogin(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
-
-      if (verifyError) {
-        console.error("Login verification failed:", verifyError);
-
+        setUserDisplayName(null); // Clear display name on failure
         toast({
-          title: "Entra Authentication Error",
-          description: verifyError,
+          title: "Entra Configuration Error",
+          description: "MSAL instance is not available. Please check your configuration.",
           variant: "destructive",
         });
+      }
 
-        return verifyError;
+      // Verify login, display login popup if needed
+      const verifyResult = await verifyLogin(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
+
+      if (!verifyResult.success) {
+        console.error("Login verification failed:", verifyResult.message);
+        setUserDisplayName(null); // Clear display name on failure
+        toast({
+          title: "Entra Authentication Error",
+          description: verifyResult.message,
+          variant: "destructive",
+        });
       } else {
+        setUserDisplayName(verifyResult.displayName);
         toast({
           title: "Entra Authentication Success",
-          description: "You are successfully authenticated with Entra ID."
+          description: verifyResult.message
         });
       }
 
