@@ -10,6 +10,13 @@ export async function isUserLoggedIn(
     return activeAccount !== null;
 }
 
+export async function getUserDisplayName(
+    instance: IPublicClientApplication
+): Promise<string | null> {
+    const activeAccount = instance.getActiveAccount();
+    return activeAccount?.idTokenClaims?.name ?? null;
+}
+
 export async function verifyLogin(
     instance: IPublicClientApplication,
     requestedScopes: string[] | string | undefined
@@ -79,6 +86,32 @@ export async function verifyLogin(
                 displayName: "",
             };
         }
+    }
+}
+
+export async function signOut(instance: IPublicClientApplication): Promise<boolean> {
+    if (!instance) {
+        console.error("MSAL instance is not available.");
+        return false;
+    }
+
+    const activeAccount = instance.getActiveAccount();
+
+    if (!activeAccount) {
+        console.warn("No active account found to sign out.");
+        return false;
+    }
+
+    try {
+        await instance.logoutPopup({
+            account: activeAccount,
+            postLogoutRedirectUri: window.location.origin, // Redirect after logout
+        });
+        console.log("User signed out successfully.");
+        return true;
+    } catch (error) {
+        console.error("Failed to sign out:", error);
+        return false;
     }
 }
 

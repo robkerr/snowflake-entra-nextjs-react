@@ -10,7 +10,7 @@ const ScrollableDataTable = dynamic(() => import("@/components/scrollable-data-t
 import { useMsal } from "@azure/msal-react";
 // import { BrowserUtils } from "@azure/msal-browser";
 import { snowflakeQuery } from '@/lib/snowflake-query';
-import { isUserLoggedIn, verifyLogin, getAccessToken } from "@/lib/msal-helper";
+import { isUserLoggedIn, verifyLogin, signOut, getAccessToken, getUserDisplayName } from "@/lib/msal-helper";
 
 
 export default function ChatPage() {
@@ -93,6 +93,28 @@ export default function ChatPage() {
     }
   };
 
+  async function logout() {
+    console.log("logging out");
+    const success = await signOut(instance);
+    if (success) {
+      console.log("User logged out successfully.");
+      setIsLoggedIn(false);
+      setUserDisplayName(null);
+      toast({
+        title: "Entra Logout Success",
+        description: "You have been logged out successfully.",
+      });
+    } else {
+      console.error("Logout failed.");
+      toast({
+        title: "Entra Logout Error",
+        description: "Failed to log out. Please try again.",
+        variant: "destructive",
+      });
+    }
+    // Add actual logout logic here if needed
+  }
+
   useEffect(() => {
     const checkLogin = async () => {
       // Configuation check
@@ -109,9 +131,20 @@ export default function ChatPage() {
 
       const loggedIn = await isUserLoggedIn(instance);
       setIsLoggedIn(loggedIn);
-      // if (!loggedIn) {
-      //   loginOrGetUserInfo();
-      // }
+
+      if (loggedIn) {
+        // If already logged in, get user display name
+        const displayName = await getUserDisplayName(instance);
+        setUserDisplayName(displayName);
+        toast({
+          title: "Entra Authentication Success",
+          description: `Welcome back, ${displayName ?? "User"}!`,
+        });
+      } else {
+        // Since we can't get the display name, force a login flow
+        setIsLoggedIn(false);
+        setUserDisplayName(null);
+      }
     }
 
     checkLogin();
@@ -159,14 +192,31 @@ export default function ChatPage() {
         <div className="absolute bottom-32 left-1/3 w-80 h-80 bg-white/5 rounded-full blur-3xl animate-pulse delay-2000"></div>
       </div>
 
+      {/* Header Bar */}
+      <header className="relative z-20 w-full flex items-center justify-between px-8 py-4 bg-white/10 backdrop-blur-xl border-b border-white/20 shadow-lg">
+        <div className="flex items-center">
+          <span className="text-2xl font-bold text-white tracking-tight">Snowflake OAuth Integration Test</span>
+        </div>
+        <div className="flex items-center gap-4">
+          {isLoggedIn && userDisplayName && (
+            <>
+              <span className="text-white/90 font-medium text-lg truncate max-w-[200px]">{userDisplayName}</span>
+              <button
+                onClick={logout}
+                className="ml-2 px-3 py-1 rounded-lg bg-gradient-to-r from-[#3b82f6] to-[#1e40af] text-white text-sm font-semibold shadow border-0 transition-all duration-200 hover:from-[#2563eb] hover:to-[#1e3a8a]"
+                style={{ minWidth: 0 }}
+              >
+                Logout
+              </button>
+            </>
+          )}
+        </div>
+      </header>
+
       {/* Main Content */}
       <div className="relative z-10 min-h-screen flex items-center justify-center p-6">
         <div className="w-full max-w-[80vw]" style={{ minWidth: 0 }}>
-          {/* Logo and Header */}
           <div className="text-center mb-8">
-            <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
-              Snowflake OAuth Integration Test
-            </h1>
             <p className="text-white/80 text-lg font-medium">
               This test scaffold allows you to execute SQL queries against a Snowflake database <br />using your Entra ID and OAuth access token authentication.
             </p>
