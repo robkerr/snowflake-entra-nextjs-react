@@ -1,4 +1,6 @@
-export async function snowflakeQuery(sql_statement: string, token: string) {
+import type { RowData, SnowflakeResponse } from "@/lib/types";
+
+export async function snowflakeQuery(sql_statement: string, token: string): Promise<SnowflakeResponse> {
     try {
         const snowflakeInstance = process.env.NEXT_PUBLIC_SNOWFLAKE_INSTANCE;
         const snowflakeDB = process.env.NEXT_PUBLIC_SNOWFLAKE_DB;
@@ -31,19 +33,21 @@ export async function snowflakeQuery(sql_statement: string, token: string) {
             return {
                 success: false,
                 status: response.status,
-                sql_status: response_json["code"],
-                error: response_json["message"],
+                sql_status: response_json["code"] ?? null,
+                error: response_json["message"] ?? null,
                 headings: null,
                 data: null
-            }
+            };
         } else {
             return {
                 success: true,
                 status: response.status,
-                sql_status: response_json["code"],
+                sql_status: response_json["code"] ?? null,
                 error: null,
-                headings: response_json["resultSetMetaData"]["rowType"].map((col: any) => col.name),
-                data: response_json["data"] || null,
+                headings: response_json["resultSetMetaData"] && response_json["resultSetMetaData"]["rowType"]
+                    ? response_json["resultSetMetaData"]["rowType"].map((col: unknown) => (col as { name: string }).name) as string[]
+                    : null,
+                data: response_json["data"] as RowData[] || null,
             };
         }
     } catch (err) {
@@ -57,7 +61,12 @@ export async function snowflakeQuery(sql_statement: string, token: string) {
             errorMessage = 'Unknown error';
         }
         return {
-            "error": errorMessage
+            success: false,
+            status: -1,
+            sql_status: null,
+            error: errorMessage,
+            headings: null,
+            data: null
         };
     }
 }

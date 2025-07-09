@@ -1,4 +1,4 @@
-import { IPublicClientApplication, InteractionStatus } from "@azure/msal-browser";
+import { IPublicClientApplication } from "@azure/msal-browser";
 
 // Returns null if already logged in or user logs in here, otherwise returns an error message
 import type { VerifyLoginResult } from "@/lib/types";

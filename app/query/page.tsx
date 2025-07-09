@@ -2,7 +2,7 @@
 "use client";
 import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
-import type { RowData } from "@/lib/types";
+import type { RowData, SnowflakeResponse } from "@/lib/types";
 import { useToast } from "@/components/ui/use-toast";
 
 // Dynamically import the ScrollableDataTable component for client-side rendering only
@@ -11,7 +11,7 @@ import { useMsal } from "@azure/msal-react";
 // import { BrowserUtils } from "@azure/msal-browser";
 import { snowflakeQuery } from '@/lib/snowflake-query';
 import { isUserLoggedIn, verifyLogin, getAccessToken } from "@/lib/msal-helper";
-import type { VerifyLoginResult } from "@/lib/types";
+
 
 export default function ChatPage() {
   // Query input from user
@@ -35,7 +35,6 @@ export default function ChatPage() {
   const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
 
   async function submitQuery(sql: string): Promise<boolean> {
-
     const accessToken = await getAccessToken(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
 
     if (!accessToken) {
@@ -47,31 +46,25 @@ export default function ChatPage() {
     }
 
     try {
-      // Check if the SQL statement is empty or only whitespace
-      const response = await snowflakeQuery(sql, accessToken);
-      // console.log('Response from Snowflake:', response.data);
+      const response: SnowflakeResponse = await snowflakeQuery(sql, accessToken);
 
-      if (!response || !response.data) {
+      if (!response.success) {
         toast({
           title: "Snowflake Query Failed",
-          description: "No SQL response received.",
+          description: response.error ?? "No SQL response received.",
           variant: "destructive"
         });
         return false;
       } else {
-        setEntries(response.data);
-
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const columns = response["resultSetMetaData"]["rowType"].map((col: any) => col.name);
-        setHeadings(columns);
-        
+        setEntries(response.data ?? []);
+        setHeadings(response.headings ?? []);
         return true;
       }
     } catch (error) {
       toast({
-          title: "Snowflake Query Failed",
-          description: `Error executing SQL query: ${error}`,
-          variant: "destructive"
+        title: "Snowflake Query Failed",
+        description: `Error executing SQL query: ${error}`,
+        variant: "destructive"
       });
       return false;
     }
@@ -82,7 +75,7 @@ export default function ChatPage() {
     const verifyResult = await verifyLogin(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
 
     if (!verifyResult.success) {
-      console.error("Login verification failed:", verifyResult.message);
+      console.log("Login verification failed:", verifyResult.message);
       setIsLoggedIn(false);
       setUserDisplayName(null); // Clear display name on failure
       toast({
@@ -122,7 +115,6 @@ export default function ChatPage() {
     }
 
     checkLogin();
-  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance, toast]);
 
   
@@ -148,7 +140,7 @@ export default function ChatPage() {
     
     if (!success) {
       // If the query failed, we can show an error message or reset the input
-      console.error("Query execution failed.");
+      console.log("Query execution failed.");
       setHeadings([]); // Clear headings on error
       setEntries([]); // Clear entries on error
       return;
@@ -176,7 +168,7 @@ export default function ChatPage() {
               Snowflake OAuth Integration Test
             </h1>
             <p className="text-white/80 text-lg font-medium">
-              Experiment with text input and stats
+              This test scaffold allows you to execute SQL queries against a Snowflake database <br />using your Entra ID and OAuth access token authentication.
             </p>
           </div>
 
@@ -222,15 +214,9 @@ export default function ChatPage() {
                 )}
               </div>
 
-              {/* Card Footer */}
-              <div className="bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm p-6 border-t border-white/10">
-                <p className="text-white/60 text-xs text-center">
-                  This is a demo playground. Your text is not saved.
-                </p>
-              </div>
             </div>
           ) : (
-            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col items-center justify-center p-12">
+            <div className="mx-auto bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col items-center justify-center p-12 max-w-xs" style={{ maxWidth: 400 }}>
               <h2 className="text-2xl font-semibold text-white text-center mb-6">
                 Sign in to Entra ID
               </h2>
@@ -242,20 +228,6 @@ export default function ChatPage() {
               </button>
             </div>
           )}
-
-          {/* Bottom Text */}
-          <div className="text-center mt-8">
-            <p className="text-white/50 text-sm">
-            <a
-                href="https://robkerr.ai"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="underline hover:text-white/80 transition-colors"
-            >
-                For more info visit robkerr.ai
-            </a>
-            </p>
-          </div>
         </div>
       </div>
     </div>
