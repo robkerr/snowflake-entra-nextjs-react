@@ -1,6 +1,12 @@
 export async function snowflakeQuery(sql_statement: string, token: string) {
     try {
-        const url = 'https://gjcdsmk-cua46455.snowflakecomputing.com/api/v2/statements';
+        const snowflakeInstance = process.env.NEXT_PUBLIC_SNOWFLAKE_INSTANCE;
+        const snowflakeDB = process.env.NEXT_PUBLIC_SNOWFLAKE_DB;
+        const snowflakeSchema = process.env.NEXT_PUBLIC_SNOWFLAKE_SCHEMA;
+        const snowflakeWarehouse = process.env.NEXT_PUBLIC_SNOWFLAKE_WAREHOUSE;
+        const snowflakeRole = process.env.NEXT_PUBLIC_SNOWFLAKE_ROLE;
+
+        const url =`https://${snowflakeInstance}.snowflakecomputing.com/api/v2/statements`;
 
         const response = await fetch(url, {
             method: 'POST',
@@ -12,16 +18,10 @@ export async function snowflakeQuery(sql_statement: string, token: string) {
             body: JSON.stringify({
                 "statement": sql_statement,
                 "timeout": 60,
-                "database": "DW",
-                "schema": "PUBLIC",
-                "warehouse": "COMPUTE_WH",
-                "role": "DW_USERS",
-                "bindings": {
-                  "1": {
-                    "type": "TEXT",
-                    "value": "EU"
-                  }
-                }
+                "database": `${snowflakeDB}`,
+                "schema": `${snowflakeSchema}`,
+                "warehouse": `${snowflakeWarehouse}`,
+                "role": `${snowflakeRole}`
               })
         });
 

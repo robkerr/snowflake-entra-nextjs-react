@@ -11,10 +11,12 @@ import { useMsal, useAccount, useIsAuthenticated } from "@azure/msal-react";
 import { snowflakeQuery } from '@/lib/snowflake-query';
 
 export default function ChatPage() {
-  const [input, setInput] = useState("SELECT TOP 10 * FROM DW.PUBLIC.FORECAST");
+  const defaultQuery = process.env.NEXT_PUBLIC_DEFAULT_QUERY ?? "";
+  const [input, setInput] = useState(defaultQuery);
   const [entries, setEntries] = useState<RowData[]>([]);
   const [headings, setHeadings] = useState<string[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
 
   // MSAL Integration
   const { instance } = useMsal();
@@ -146,7 +148,7 @@ export default function ChatPage() {
       return;
     } 
 
-    setInput("SELECT TOP 10 * FROM DW.PUBLIC.FORECAST"); // Reset input to default query
+    setInput(defaultQuery); // Reset input to default query
     if (textareaRef.current) textareaRef.current.focus();
   }
 
