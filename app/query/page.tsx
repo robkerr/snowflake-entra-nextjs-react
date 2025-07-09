@@ -39,30 +39,40 @@ export default function ChatPage() {
     const accessToken = await getAccessToken(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
 
     if (!accessToken) {
-      console.error("No access token available.");
+      toast({
+        title: "Entra Authentication Success",
+        description: "No access token available."
+      });
       return false;
     }
 
     try {
       // Check if the SQL statement is empty or only whitespace
       const response = await snowflakeQuery(sql, accessToken);
-      console.log('Response from Snowflake:', response.data);
+      // console.log('Response from Snowflake:', response.data);
 
       if (!response || !response.data) {
-        console.error("No SQL response received.");
+        toast({
+          title: "Snowflake Query Failed",
+          description: "No SQL response received.",
+          variant: "destructive"
+        });
         return false;
       } else {
         setEntries(response.data);
 
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const columns = response["resultSetMetaData"]["rowType"].map((col: any) => col.name);
-        console.log("Columns:", columns);
         setHeadings(columns);
         
         return true;
       }
     } catch (error) {
-      console.error("Error executing SQL query:", error);
+      toast({
+          title: "Snowflake Query Failed",
+          description: `Error executing SQL query: ${error}`,
+          variant: "destructive"
+      });
       return false;
     }
   }
@@ -73,6 +83,7 @@ export default function ChatPage() {
 
     if (!verifyResult.success) {
       console.error("Login verification failed:", verifyResult.message);
+      setIsLoggedIn(false);
       setUserDisplayName(null); // Clear display name on failure
       toast({
         title: "Entra Authentication Error",
@@ -80,6 +91,7 @@ export default function ChatPage() {
         variant: "destructive",
       });
     } else {
+      setIsLoggedIn(true);
       setUserDisplayName(verifyResult.displayName);
       toast({
         title: "Entra Authentication Success",
@@ -104,9 +116,9 @@ export default function ChatPage() {
 
       const loggedIn = await isUserLoggedIn(instance);
       setIsLoggedIn(loggedIn);
-      if (!loggedIn) {
-        loginOrGetUserInfo();
-      }
+      // if (!loggedIn) {
+      //   loginOrGetUserInfo();
+      // }
     }
 
     checkLogin();
@@ -168,54 +180,68 @@ export default function ChatPage() {
             </p>
           </div>
 
-          {/* Glassmorphic Card */}
-          <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
-            {/* Card Header */}
-            <div className="bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-sm p-8 border-b border-white/20">
-              <h2 className="text-2xl font-semibold text-white text-center">
-                Send SQL Statement to Snowflake
-              </h2>
-              <p className="text-white/70 text-center mt-2">
-                Enter a query against the SHIP_PLAN table to test OAuth.
-              </p>
-            </div>
-
-            {/* Card Content */}
-            <div className="p-8 space-y-6">
-              <div className="flex gap-3 items-end">
-                <textarea
-                  ref={textareaRef}
-                  rows={3}
-                  value={input}
-                  onChange={handleInputChange}
-                  onKeyDown={handleKeyDown}
-                  placeholder="Type your message..."
-                  className="flex-1 resize-vertical p-3 rounded-2xl bg-white/20 text-white placeholder-white/60 font-medium text-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-[#0a66c2] backdrop-blur-md shadow-inner min-h-[60px]"
-                  style={{ minHeight: 60 }}
-                />
-                <button
-                  onClick={handleGo}
-                  disabled={input.trim() === ""}
-                  className="h-12 min-w-[60px] px-6 rounded-2xl bg-gradient-to-r from-white to-white/90 text-[#0a66c2] font-semibold text-lg shadow-xl border-0 transition-all duration-300 transform hover:scale-[1.04] hover:from-white/90 hover:to-white/80 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
-                >
-                  Go
-                </button>
+          {/* Glassmorphic Card or Sign-in Prompt */}
+          {isLoggedIn ? (
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden">
+              {/* Card Header */}
+              <div className="bg-gradient-to-r from-white/20 to-white/10 backdrop-blur-sm p-8 border-b border-white/20">
+                <h2 className="text-2xl font-semibold text-white text-center">
+                  Send SQL Statement to Snowflake
+                </h2>
+                <p className="text-white/70 text-center mt-2">
+                  Enter a query against the SHIP_PLAN table to test OAuth.
+                </p>
               </div>
 
-              {entries.length > 0 && (
-                <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-5 mt-6 overflow-x-auto">
-                  <ScrollableDataTable headings={headings} data={entries} />
+              {/* Card Content */}
+              <div className="p-8 space-y-6">
+                <div className="flex gap-3 items-end">
+                  <textarea
+                    ref={textareaRef}
+                    rows={3}
+                    value={input}
+                    onChange={handleInputChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Type your message..."
+                    className="flex-1 resize-vertical p-3 rounded-2xl bg-white/20 text-white placeholder-white/60 font-medium text-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-[#0a66c2] backdrop-blur-md shadow-inner min-h-[60px]"
+                    style={{ minHeight: 60 }}
+                  />
+                  <button
+                    onClick={handleGo}
+                    disabled={input.trim() === ""}
+                    className="h-12 min-w-[60px] px-6 rounded-2xl bg-gradient-to-r from-white to-white/90 text-[#0a66c2] font-semibold text-lg shadow-xl border-0 transition-all duration-300 transform hover:scale-[1.04] hover:from-white/90 hover:to-white/80 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    Go
+                  </button>
                 </div>
-              )}
-            </div>
 
-            {/* Card Footer */}
-            <div className="bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm p-6 border-t border-white/10">
-              <p className="text-white/60 text-xs text-center">
-                This is a demo playground. Your text is not saved.
-              </p>
+                {entries.length > 0 && (
+                  <div className="bg-white/5 backdrop-blur-sm border border-white/10 rounded-2xl p-5 mt-6 overflow-x-auto">
+                    <ScrollableDataTable headings={headings} data={entries} />
+                  </div>
+                )}
+              </div>
+
+              {/* Card Footer */}
+              <div className="bg-gradient-to-r from-white/5 to-white/10 backdrop-blur-sm p-6 border-t border-white/10">
+                <p className="text-white/60 text-xs text-center">
+                  This is a demo playground. Your text is not saved.
+                </p>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="bg-white/10 backdrop-blur-xl border border-white/20 rounded-3xl shadow-2xl overflow-hidden flex flex-col items-center justify-center p-12">
+              <h2 className="text-2xl font-semibold text-white text-center mb-6">
+                Sign in to Entra ID
+              </h2>
+              <button
+                onClick={loginOrGetUserInfo}
+                className="w-full max-w-xs h-16 bg-gradient-to-r from-[#3b82f6] to-[#1e40af] text-white font-semibold text-lg shadow-xl border-0 rounded-2xl transition-all duration-300 transform hover:scale-[1.04] hover:from-[#2563eb] hover:to-[#1e3a8a] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                Sign In
+              </button>
+            </div>
+          )}
 
           {/* Bottom Text */}
           <div className="text-center mt-8">

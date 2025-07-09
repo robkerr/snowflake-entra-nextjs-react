@@ -28,10 +28,24 @@ export async function snowflakeQuery(sql_statement: string, token: string) {
         const response_json = await response.json();
 
         if (response.status != 200) {
-            throw new Error(response_json.error);
+            return {
+                success: false,
+                status: response.status,
+                sql_status: response_json["code"],
+                error: response_json["message"],
+                headings: null,
+                data: null
+            }
+        } else {
+            return {
+                success: true,
+                status: response.status,
+                sql_status: response_json["code"],
+                error: null,
+                headings: response_json["resultSetMetaData"]["rowType"].map((col: any) => col.name),
+                data: response_json["data"] || null,
+            };
         }
-
-        return response_json;
     } catch (err) {
         console.error("call failed:", err);
         let errorMessage: string;
