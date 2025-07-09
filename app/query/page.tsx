@@ -10,7 +10,7 @@ const ScrollableDataTable = dynamic(() => import("@/components/scrollable-data-t
 import { useMsal } from "@azure/msal-react";
 // import { BrowserUtils } from "@azure/msal-browser";
 import { snowflakeQuery } from '@/lib/snowflake-query';
-import { verifyLogin, getAccessToken } from "@/lib/msal-helper";
+import { isUserLoggedIn, verifyLogin, getAccessToken } from "@/lib/msal-helper";
 import type { VerifyLoginResult } from "@/lib/types";
 
 export default function ChatPage() {
@@ -31,6 +31,7 @@ export default function ChatPage() {
   
   // const [tokenIssuance, setTokenIssuance] = useState(null);
   // const [tokenExpiration, setTokenExpiration] = useState(null);
+  const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
 
   async function submitQuery(sql: string): Promise<boolean> {
@@ -66,8 +67,28 @@ export default function ChatPage() {
     }
   }
 
+  async function loginOrGetUserInfo() {
+    // Verify login, display login popup if needed
+    const verifyResult = await verifyLogin(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
+
+    if (!verifyResult.success) {
+      console.error("Login verification failed:", verifyResult.message);
+      setUserDisplayName(null); // Clear display name on failure
+      toast({
+        title: "Entra Authentication Error",
+        description: verifyResult.message,
+        variant: "destructive",
+      });
+    } else {
+      setUserDisplayName(verifyResult.displayName);
+      toast({
+        title: "Entra Authentication Success",
+        description: verifyResult.message
+      });
+    }
+  };
+
   useEffect(() => {
-    
     const checkLogin = async () => {
       // Configuation check
       if (!instance) {
@@ -81,30 +102,19 @@ export default function ChatPage() {
         });
       }
 
-      // Verify login, display login popup if needed
-      const verifyResult = await verifyLogin(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
-
-      if (!verifyResult.success) {
-        console.error("Login verification failed:", verifyResult.message);
-        setUserDisplayName(null); // Clear display name on failure
-        toast({
-          title: "Entra Authentication Error",
-          description: verifyResult.message,
-          variant: "destructive",
-        });
-      } else {
-        setUserDisplayName(verifyResult.displayName);
-        toast({
-          title: "Entra Authentication Success",
-          description: verifyResult.message
-        });
+      const loggedIn = await isUserLoggedIn(instance);
+      setIsLoggedIn(loggedIn);
+      if (!loggedIn) {
+        loginOrGetUserInfo();
       }
-
-      return null;
-    };
+    }
 
     checkLogin();
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [instance, toast]);
+
+  
+
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);

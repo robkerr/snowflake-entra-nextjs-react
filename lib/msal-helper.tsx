@@ -3,6 +3,13 @@ import { IPublicClientApplication, InteractionStatus } from "@azure/msal-browser
 // Returns null if already logged in or user logs in here, otherwise returns an error message
 import type { VerifyLoginResult } from "@/lib/types";
 
+export async function isUserLoggedIn(
+    instance: IPublicClientApplication,
+): Promise<boolean> {
+    const activeAccount = instance.getActiveAccount();
+    return activeAccount !== null;
+}
+
 export async function verifyLogin(
     instance: IPublicClientApplication,
     requestedScopes: string[] | string | undefined
@@ -77,6 +84,7 @@ export async function verifyLogin(
 
 // Function to get access token silently for a given scope
 export async function getAccessToken(instance: IPublicClientApplication, scope: string | undefined): Promise<string | null> {
+    console.log("Acquiring access token for scope:", scope);
     if (!instance) {
       console.error("MSAL instance is not available.");
       return null;
@@ -105,6 +113,7 @@ export async function getAccessToken(instance: IPublicClientApplication, scope: 
         account: activeAccount,
       };
       const authResult = await instance.acquireTokenSilent(request);
+      console.log("Token acquired successfully:", authResult);
       return authResult.accessToken;
     } catch (error) {
       console.error("Failed to acquire token silently:", error);
