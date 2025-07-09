@@ -3,12 +3,14 @@
 import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import type { RowData } from "@/lib/types";
+import { useToast } from "@/components/ui/use-toast";
 
 // Dynamically import the ScrollableDataTable component for client-side rendering only
 const ScrollableDataTable = dynamic(() => import("@/components/scrollable-data-table"), { ssr: false });
-import { useMsal, useAccount, useIsAuthenticated } from "@azure/msal-react";
+import { useMsal } from "@azure/msal-react";
 // import { BrowserUtils } from "@azure/msal-browser";
 import { snowflakeQuery } from '@/lib/snowflake-query';
+import { verifyLogin, getAccessToken } from "@/lib/msal-helper";
 
 export default function ChatPage() {
   // Query input from user
@@ -20,6 +22,7 @@ export default function ChatPage() {
   const [entries, setEntries] = useState<RowData[]>([]);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const { toast } = useToast();
   
   //Get Reference to global MSAL instance
   const { instance } = useMsal();
@@ -29,32 +32,10 @@ export default function ChatPage() {
   // const [tokenExpiration, setTokenExpiration] = useState(null);
   // const [userName, setUserName] = useState<string | null>(null);
 
-  async function getAccessToken(scope: string): Promise<string | null> {
-    if (!instance) {
-      console.error("MSAL instance is not available.");
-      return null;
-    }
-    const activeAccount = instance.getActiveAccount();
-    if (!activeAccount) {
-      console.error("No active account found.");
-      return null;
-    }
-    try {
-      const request = {
-        scopes: [scope],
-        account: activeAccount,
-      };
-      const authResult = await instance.acquireTokenSilent(request);
-      return authResult.accessToken;
-    } catch (error) {
-      console.error("Failed to acquire token silently:", error);
-      return null;
-    }
-  }
-
   async function submitQuery(sql: string): Promise<boolean> {
-    const scope = process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE ?? "";
-    const accessToken = await getAccessToken(scope);
+
+    const accessToken = await getAccessToken(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
+
     if (!accessToken) {
       console.error("No access token available.");
       return false;
@@ -85,47 +66,38 @@ export default function ChatPage() {
   }
 
   useEffect(() => {
-    if (!instance) {
-      console.error("MSAL instance is not available in useEffect.");
-      return;
-    }
-    console.log("Query/Page mounted, initializing MSAL...");
-    const checkLogin = async () => {
-      const scope = process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE ?? "";
-      console.log("Checking login status...");
-      let activeAccount = instance.getActiveAccount(); 
-      if (!activeAccount) {
-        try {
-          let response = null;
-          try {
-            // Try silent login first
-            response = await instance.ssoSilent({
-                scopes: ["User.Read", scope], // Replace with your required scopes
-            });
-          } catch (error) {
-            console.error("Silent login failed", error);
-              response = await instance.loginPopup({
-                  scopes: ["User.Read", scope],
-              });
-          } 
-
-          if (response && response.account) {
-            activeAccount = response.account;
-            instance.setActiveAccount(activeAccount);
-            console.log("User logged in successfully:", activeAccount);
-          } else {
-            console.error("No account found after login.");
-          }
-
-        } catch (error) {
-          console.error("Login failed:", error);
-          // showErrorToast(`Login failed. Please try again. ${(error as Error).message}`);
-        }
+    
+    const checkLogin = async (): Promise<string | null> => {
+      if (!instance) {
+        const errorMessage = "MSAL instance is not available in useEffect.";
+        console.error(errorMessage);
+        return errorMessage;
       }
-    };  
+
+      const verifyError = await verifyLogin(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
+
+      if (verifyError) {
+        console.error("Login verification failed:", verifyError);
+
+        toast({
+          title: "Entra Authentication Error",
+          description: verifyError,
+          variant: "destructive",
+        });
+
+        return verifyError;
+      } else {
+        toast({
+          title: "Entra Authentication Success",
+          description: "You are successfully authenticated with Entra ID."
+        });
+      }
+
+      return null;
+    };
 
     checkLogin();
-  }, [instance]);
+  }, [instance, toast]);
 
   function handleInputChange(e: React.ChangeEvent<HTMLTextAreaElement>) {
     setInput(e.target.value);

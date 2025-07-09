@@ -3,7 +3,7 @@
 import { PublicClientApplication } from '@azure/msal-browser';
 import { MsalProvider } from '@azure/msal-react';
 // import { msalConfig } from '@/lib/msal-config';
-import { ReactNode, useEffect, useState } from 'react';
+import { ReactNode } from 'react';
 
 // MSAL instance
 const clientId = process.env.NEXT_PUBLIC_AZURE_CLIENT_ID ?? "";
