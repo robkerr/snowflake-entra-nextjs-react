@@ -11,15 +11,20 @@ import { useMsal, useAccount, useIsAuthenticated } from "@azure/msal-react";
 import { snowflakeQuery } from '@/lib/snowflake-query';
 
 export default function ChatPage() {
+  // Query input from user
   const defaultQuery = process.env.NEXT_PUBLIC_DEFAULT_QUERY ?? "";
   const [input, setInput] = useState(defaultQuery);
-  const [entries, setEntries] = useState<RowData[]>([]);
+
+  // Output column headings and data from Snowflake
   const [headings, setHeadings] = useState<string[]>([]);
+  const [entries, setEntries] = useState<RowData[]>([]);
+
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-
-  // MSAL Integration
+  //Get Reference to global MSAL instance
   const { instance } = useMsal();
+
+  
   // const [tokenIssuance, setTokenIssuance] = useState(null);
   // const [tokenExpiration, setTokenExpiration] = useState(null);
   // const [userName, setUserName] = useState<string | null>(null);
