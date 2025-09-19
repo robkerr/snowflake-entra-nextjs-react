@@ -4,6 +4,7 @@ import React, { useState, useRef, useEffect } from "react";
 import dynamic from "next/dynamic";
 import type { RowData, SnowflakeResponse } from "@/lib/types";
 import { useToast } from "@/components/ui/use-toast";
+import { appInsights } from '@/components/appInsights';
 
 // Dynamically import the ScrollableDataTable component for client-side rendering only
 const ScrollableDataTable = dynamic(() => import("@/components/scrollable-data-table"), { ssr: false });
@@ -98,6 +99,7 @@ export default function ChatPage() {
   }
 
   async function loginOrGetUserInfo() {
+    appInsights.trackEvent({ name: 'Logging in' });
     // Verify login, display login popup if needed
     const verifyResult = await verifyLogin(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
 
@@ -113,6 +115,7 @@ export default function ChatPage() {
     } else {
       setIsLoggedIn(true);
       setUserDisplayName(verifyResult.displayName);
+      appInsights.setAuthenticatedUserContext(verifyResult.displayName);
       toast({
         title: "Entra Authentication Success",
         description: verifyResult.message
@@ -121,6 +124,7 @@ export default function ChatPage() {
   };
 
   async function logout() {
+    appInsights.trackEvent({ name: 'Logging Out' });
     console.log("logging out");
     const success = await signOut(instance);
     if (success) {
@@ -227,7 +231,7 @@ export default function ChatPage() {
       {/* Header Bar */}
       <header className="relative z-20 w-full flex items-center justify-between px-8 py-4 bg-white/10 backdrop-blur-xl border-b border-white/20 shadow-lg">
         <div className="flex items-center">
-          <span className="text-2xl font-bold text-white tracking-tight">Snowflake OAuth Integration Test</span>
+          <span className="text-2xl font-bold text-white tracking-tight">Snowflake OAuth Integration Test v2</span>
         </div>
         <div className="flex items-center gap-4">
           {isLoggedIn && userDisplayName && (

@@ -1,3 +1,4 @@
+import { appInsights } from '@/components/appInsights';
 import type { RowData, SnowflakeResponse } from "@/lib/types";
 
 export async function snowflakeQuery(sql_statement: string, token: string): Promise<SnowflakeResponse> {
@@ -9,6 +10,8 @@ export async function snowflakeQuery(sql_statement: string, token: string): Prom
         const snowflakeRole = process.env.NEXT_PUBLIC_SNOWFLAKE_ROLE;
 
         const url =`https://${snowflakeInstance}.snowflakecomputing.com/api/v2/statements`;
+
+        appInsights.trackEvent({ name: `Snowflake query executing: ${url}`});
 
         const response = await fetch(url, {
             method: 'POST',
@@ -30,6 +33,7 @@ export async function snowflakeQuery(sql_statement: string, token: string): Prom
         const response_json = await response.json();
 
         if (response.status != 200) {
+            appInsights.trackEvent({ name: `Snowflake query FAILED: ${response_json["message"] ?? null}`});
             return {
                 success: false,
                 status: response.status,
@@ -39,6 +43,7 @@ export async function snowflakeQuery(sql_statement: string, token: string): Prom
                 data: null
             };
         } else {
+            appInsights.trackEvent({ name: `Snowflake query SUCCESS: ${response_json["code"] ?? null}`});
             return {
                 success: true,
                 status: response.status,
@@ -51,6 +56,7 @@ export async function snowflakeQuery(sql_statement: string, token: string): Prom
             };
         }
     } catch (err) {
+        appInsights.trackEvent({ name: `Snowflake query EXCEPTION: ${err}`});
         console.error("call failed:", err);
         let errorMessage: string;
         if (err instanceof Error) {

@@ -56,7 +56,7 @@ export default function ChatPage() {
           {/* Logo and Header */}
           <div className="text-center mb-8">
             <h1 className="text-4xl font-bold text-white mb-3 tracking-tight">
-              Snowflake OAuth Integration Test
+              Snowflake OAuth Integration Test v2
             </h1>
             <p className="text-white/80 text-lg font-medium">
               Experiment with text input and stats

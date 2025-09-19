@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
-import { MSALProviderWrapper } from "@/components/msal-provider";
+// import { AppInsightsContext } from '@microsoft/applicationinsights-react-js';
+
+import Providers from '@/components/providers';
 import { Toaster } from "@/components/ui/toaster";
 
 const geistSans = Geist({
@@ -27,10 +29,10 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${geistSans.variable} ${geistMono.variable} antialiased`}>
-        <MSALProviderWrapper>
+        <Providers>
           {children}
-          <Toaster />
-        </MSALProviderWrapper>
+        </Providers>
+        <Toaster />
       </body>
     </html>
   );

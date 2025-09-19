@@ -1,11 +1,14 @@
+import { appInsights } from '@/components/appInsights';
 
 export async function get_query(token: string): Promise<string> {
     try {
+        
         const base_url = "https://fnapp-kla-inv-agent.azurewebsites.net" // process.env.NEXT_BASE_URL;
 
         const url =`${base_url}/api/getquery`;
 
         console.log("Calling API:", url);
+        appInsights.trackEvent({ name: `Get Query API Call: ${url}`});
 
         const response = await fetch(url, {
             method: 'POST',
