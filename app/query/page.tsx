@@ -10,13 +10,14 @@ const ScrollableDataTable = dynamic(() => import("@/components/scrollable-data-t
 import { useMsal } from "@azure/msal-react";
 // import { BrowserUtils } from "@azure/msal-browser";
 import { snowflakeQuery } from '@/lib/snowflake-query';
+import { get_query } from '@/lib/api';
 import { isUserLoggedIn, verifyLogin, signOut, getAccessToken, getUserDisplayName } from "@/lib/msal-helper";
 
 
 export default function ChatPage() {
   // Query input from user
-  const defaultQuery = process.env.NEXT_PUBLIC_DEFAULT_QUERY ?? "";
-  const [input, setInput] = useState(defaultQuery);
+  // const [defaultQuery, setDefaultQuery] = useState<string>("TYPE QUERY HERE");
+  const [input, setInput] = useState<string>("TYPE QUERY HERE");
 
   // Output column headings and data from Snowflake
   const [headings, setHeadings] = useState<string[]>([]);
@@ -33,6 +34,32 @@ export default function ChatPage() {
   // const [tokenExpiration, setTokenExpiration] = useState(null);
   const [isLoggedIn, setIsLoggedIn] = useState<boolean>(false);
   const [userDisplayName, setUserDisplayName] = useState<string | null>(null);
+
+  async function fetchSampleQuery() {
+    const accessToken = await getAccessToken(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
+
+    if (!accessToken) {
+      toast({
+        title: "Entra Authentication Success",
+        description: "No access token available."
+      });
+      return false;
+    }
+
+    try {
+      const api_sql = await get_query(accessToken);
+      setInput(api_sql);
+
+      console.log("SQL Query to execute:", api_sql);
+    } catch (error) {
+      toast({
+        title: "API Call Failed",
+        description: `${error}`,
+        variant: "destructive"
+      });
+      return false;
+    }
+  };
 
   async function submitQuery(sql: string): Promise<boolean> {
     const accessToken = await getAccessToken(instance, process.env.NEXT_PUBLIC_SNOWFLAKE_SCOPE);
@@ -164,7 +191,13 @@ export default function ChatPage() {
         handleGo();
       }
     }
+
   }
+
+  async function handleGetSampleQuery() {
+    await fetchSampleQuery();
+  }
+    
 
   async function handleGo() {
     if (input.trim() === "") return;
@@ -179,7 +212,6 @@ export default function ChatPage() {
       return;
     } 
 
-    setInput(defaultQuery); // Reset input to default query
     if (textareaRef.current) textareaRef.current.focus();
   }
 
@@ -248,6 +280,15 @@ export default function ChatPage() {
                     className="flex-1 resize-vertical p-3 rounded-2xl bg-white/20 text-white placeholder-white/60 font-medium text-lg border border-white/20 focus:outline-none focus:ring-2 focus:ring-[#0a66c2] backdrop-blur-md shadow-inner min-h-[60px]"
                     style={{ minHeight: 60 }}
                   />
+                  
+                  <button
+                    onClick={handleGetSampleQuery}
+                    disabled={input.trim() === ""}
+                    className="h-12 min-w-[60px] px-6 rounded-2xl bg-gradient-to-r from-white to-white/90 text-[#0a66c2] font-semibold text-lg shadow-xl border-0 transition-all duration-300 transform hover:scale-[1.04] hover:from-white/90 hover:to-white/80 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                  >
+                    Get Query
+                  </button>
+
                   <button
                     onClick={handleGo}
                     disabled={input.trim() === ""}

@@ -1,5 +1,3 @@
-
-"use client";
 "use client";
 import React, { useState, useRef } from "react";
 
@@ -10,7 +8,7 @@ type Entry = {
 };
 
 export default function ChatPage() {
-  const [input, setInput] = useState("SELECT TOP 10 * FROM DW.PUBLIC.SHIP_PLAN");
+  const [input, setInput] = useState<string>("<QUERY GOES HERE>");
   const [entries, setEntries] = useState<Entry[]>([]);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -21,14 +19,14 @@ export default function ChatPage() {
   function handleKeyDown(e: React.KeyboardEvent<HTMLTextAreaElement>) {
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
-      if (input.trim() !== "") {
+      // if (input.trim() !== "") {
         handleGo();
-      }
+      // }
     }
   }
 
   function handleGo() {
-    if (input.trim() === "") return;
+    // if (input.trim() === "") return;
     const charCount = input.length;
     const asciiSum = input.split("").reduce((sum, c) => sum + c.charCodeAt(0), 0);
     setEntries([
@@ -92,7 +90,7 @@ export default function ChatPage() {
                 />
                 <button
                   onClick={handleGo}
-                  disabled={input.trim() === ""}
+                  // disabled={input.trim() === ""}
                   className="h-12 min-w-[60px] px-6 rounded-2xl bg-gradient-to-r from-white to-white/90 text-[#0a66c2] font-semibold text-lg shadow-xl border-0 transition-all duration-300 transform hover:scale-[1.04] hover:from-white/90 hover:to-white/80 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                 >
                   Go
